@@ -1,0 +1,26 @@
+name: 'DotCMS Commit Message Getter'
+description: 'Gets the commit message for a given pull request or push'
+author: 'Victor Alfaro'
+inputs:
+  excludeTitle:
+    description: 'Setting this input to true will exclude the Pull Request title.'
+    required: false
+    default: 'false'
+  excludeDescription:
+    description: 'Setting this input to true will exclude the Pull Request description.'
+    required: false
+    default: 'false'
+  checkAllCommitMessages:
+    description: 'Setting this input to true will check all Pull Request commits'
+    required: false
+    default: 'false'
+  accessToken:
+    description: 'you must provide GITHUB_TOKEN to this input if checkAllCommitMessages is true'
+    required: false
+    default: 'false'  
+runs:
+  using: node12
+  main: dist/index.js
+branding:
+  icon: 'check'
+  color: 'blue'
