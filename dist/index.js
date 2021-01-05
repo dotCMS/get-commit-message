@@ -48,26 +48,32 @@ const graphql_1 = __webpack_require__(668);
 function getInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         const result = {};
-        core.debug("Get inputs...");
+        core.debug('Get inputs...');
         // Get excludeTitle
-        const excludeTitleStr = core.getInput("excludeTitle");
+        const excludeTitleStr = core.getInput('excludeTitle');
         core.debug(`excludeTitle: ${excludeTitleStr}`);
         // Get excludeDescription
-        const excludeDescriptionStr = core.getInput("excludeDescription");
+        const excludeDescriptionStr = core.getInput('excludeDescription');
         core.debug(`excludeDescription: ${excludeDescriptionStr}`);
         // Get checkAllCommitMessages
-        const checkAllCommitMessagesStr = core.getInput("checkAllCommitMessages");
+        const checkAllCommitMessagesStr = core.getInput('checkAllCommitMessages');
         core.debug(`checkAllCommitMessages: ${checkAllCommitMessagesStr}`);
+        // Get checkAllCommitMessages
+        const latestCommitMessageStr = core.getInput('latestCommitMessage');
+        core.debug(`latestCommitMessage: ${latestCommitMessageStr}`);
         // Set pullRequestOptions
         const pullRequestOptions = {
-            ignoreTitle: excludeTitleStr ? excludeTitleStr === "true" : false,
+            ignoreTitle: excludeTitleStr ? excludeTitleStr === 'true' : false,
             ignoreDescription: excludeDescriptionStr
-                ? excludeDescriptionStr === "true"
+                ? excludeDescriptionStr === 'true'
                 : false,
             checkAllCommitMessages: checkAllCommitMessagesStr
-                ? checkAllCommitMessagesStr === "true"
+                ? checkAllCommitMessagesStr === 'true'
                 : false,
-            accessToken: core.getInput("accessToken")
+            latestCommitMessage: latestCommitMessageStr
+                ? latestCommitMessageStr === 'true'
+                : false,
+            accessToken: core.getInput('accessToken')
         };
         core.debug(`accessToken: ${pullRequestOptions.accessToken}`);
         // Get commit messages
@@ -85,36 +91,36 @@ exports.getInputs = getInputs;
 function getMessages(pullRequestOptions) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        core.debug("Get messages...");
+        core.debug('Get messages...');
         core.debug(` - pullRequestOptions: ${JSON.stringify(pullRequestOptions, null, 2)}`);
         const messages = [];
         core.debug(` - eventName: ${github.context.eventName}`);
         switch (github.context.eventName) {
-            case "pull_request": {
+            case 'pull_request': {
                 if (!github.context.payload) {
-                    throw new Error("No payload found in the context.");
+                    throw new Error('No payload found in the context.');
                 }
                 if (!github.context.payload.pull_request) {
-                    throw new Error("No pull_request found in the payload.");
+                    throw new Error('No pull_request found in the payload.');
                 }
-                let message = "";
+                let message = '';
                 // Handle pull request title and body
                 if (!pullRequestOptions.ignoreTitle) {
                     if (!github.context.payload.pull_request.title) {
-                        throw new Error("No title found in the pull_request.");
+                        throw new Error('No title found in the pull_request.');
                     }
                     message += github.context.payload.pull_request.title;
                 }
                 else {
-                    core.debug(" - skipping title");
+                    core.debug(' - skipping title');
                 }
                 if (!pullRequestOptions.ignoreDescription) {
                     if (github.context.payload.pull_request.body) {
-                        message = message.concat(message !== "" ? "\n\n" : "", github.context.payload.pull_request.body);
+                        message = message.concat(message !== '' ? '\n\n' : '', github.context.payload.pull_request.body);
                     }
                 }
                 else {
-                    core.debug(" - skipping description");
+                    core.debug(' - skipping description');
                 }
                 if (message) {
                     messages.push(message);
@@ -122,43 +128,56 @@ function getMessages(pullRequestOptions) {
                 // Handle pull request commits
                 if (pullRequestOptions.checkAllCommitMessages) {
                     if (!pullRequestOptions.accessToken) {
-                        throw new Error("The `checkAllCommitMessages` option requires a github access token.");
+                        throw new Error('The `checkAllCommitMessages` option requires a github access token.');
                     }
                     if (!github.context.payload.pull_request.number) {
-                        throw new Error("No number found in the pull_request.");
+                        throw new Error('No number found in the pull_request.');
                     }
                     if (!github.context.payload.repository) {
-                        throw new Error("No repository found in the payload.");
+                        throw new Error('No repository found in the payload.');
                     }
                     if (!github.context.payload.repository.name) {
-                        throw new Error("No name found in the repository.");
+                        throw new Error('No name found in the repository.');
                     }
                     if (!github.context.payload.repository.owner ||
                         (!github.context.payload.repository.owner.login &&
                             !github.context.payload.repository.owner.name)) {
-                        throw new Error("No owner found in the repository.");
+                        throw new Error('No owner found in the repository.');
                     }
                     const commitMessages = yield getCommitMessagesFromPullRequest(pullRequestOptions.accessToken, (_a = github.context.payload.repository.owner.name) !== null && _a !== void 0 ? _a : github.context.payload.repository.owner.login, github.context.payload.repository.name, github.context.payload.pull_request.number);
-                    for (const message of commitMessages) {
-                        if (message) {
-                            messages.push(message);
+                    if (pullRequestOptions.latestCommitMessage) {
+                        const message = commitMessages[commitMessages.length - 1];
+                        messages.push(message);
+                    }
+                    else {
+                        for (const message of commitMessages) {
+                            if (message) {
+                                messages.push(message);
+                            }
                         }
                     }
                 }
                 break;
             }
-            case "push": {
+            case 'push': {
                 if (!github.context.payload) {
-                    throw new Error("No payload found in the context.");
+                    throw new Error('No payload found in the context.');
                 }
                 if (!github.context.payload.commits ||
                     !github.context.payload.commits.length) {
-                    core.debug(" - skipping commits");
+                    core.debug(' - skipping commits');
                     break;
                 }
-                for (const i in github.context.payload.commits) {
-                    if (github.context.payload.commits[i].message) {
-                        messages.push(github.context.payload.commits[i].message);
+                if (pullRequestOptions.latestCommitMessage) {
+                    const message = github.context.payload.commits[github.context.payload.commits.length - 1].message;
+                    messages.push(message);
+                }
+                else {
+                    for (const i in github.context.payload.commits) {
+                        const message = github.context.payload.commits[i].message;
+                        if (message) {
+                            messages.push(message);
+                        }
                     }
                 }
                 break;
@@ -167,12 +186,13 @@ function getMessages(pullRequestOptions) {
                 throw new Error(`Event "${github.context.eventName}" is not supported.`);
             }
         }
+        core.debug(`Messages: ${messages}`);
         return messages;
     });
 }
 function getCommitMessagesFromPullRequest(accessToken, repositoryOwner, repositoryName, pullRequestNumber) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.debug("Get messages from pull request...");
+        core.debug('Get messages from pull request...');
         core.debug(` - accessToken: ${accessToken}`);
         core.debug(` - repositoryOwner: ${repositoryOwner}`);
         core.debug(` - repositoryName: ${repositoryName}`);
@@ -259,22 +279,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__webpack_require__(186));
-const inputHelper = __importStar(__webpack_require__(361));
+const commitMessageGetter = __importStar(__webpack_require__(361));
 /**
  * Main function
  */
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const inputs = yield inputHelper.getInputs();
-            let commitMessage = "";
+            const inputs = yield commitMessageGetter.getInputs();
+            let commitMessage = '';
             if (inputs.messages && inputs.messages.length === 0) {
-                core.info("No commits found in the payload, skipping check.");
+                core.info('No commits found in the payload, skipping check.');
             }
             else {
-                commitMessage = inputs.messages.join("\\n");
+                commitMessage = inputs.messages.join('\n');
             }
-            core.setOutput("commit_message", commitMessage);
+            core.setOutput('commit_message', commitMessage);
         }
         catch (error) {
             core.setFailed(error);

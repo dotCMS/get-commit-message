@@ -6,6 +6,7 @@ export interface PullRequestOptions {
   ignoreTitle: boolean
   ignoreDescription: boolean
   checkAllCommitMessages: boolean // requires github token
+  latestCommitMessage: boolean
   accessToken: string
 }
 
@@ -35,6 +36,10 @@ export async function getInputs(): Promise<IGetterArguments> {
   const checkAllCommitMessagesStr = core.getInput('checkAllCommitMessages')
   core.debug(`checkAllCommitMessages: ${checkAllCommitMessagesStr}`)
 
+  // Get checkAllCommitMessages
+  const latestCommitMessageStr = core.getInput('latestCommitMessage')
+  core.debug(`latestCommitMessage: ${latestCommitMessageStr}`)
+
   // Set pullRequestOptions
   const pullRequestOptions: PullRequestOptions = {
     ignoreTitle: excludeTitleStr ? excludeTitleStr === 'true' : false,
@@ -43,6 +48,9 @@ export async function getInputs(): Promise<IGetterArguments> {
       : false,
     checkAllCommitMessages: checkAllCommitMessagesStr
       ? checkAllCommitMessagesStr === 'true'
+      : false,
+    latestCommitMessage: latestCommitMessageStr
+      ? latestCommitMessageStr === 'true'
       : false,
     accessToken: core.getInput('accessToken')
   }
@@ -147,9 +155,14 @@ async function getMessages(
           github.context.payload.pull_request.number
         )
 
-        for (const message of commitMessages) {
-          if (message) {
-            messages.push(message)
+        if (pullRequestOptions.latestCommitMessage) {
+          const message = commitMessages[commitMessages.length - 1]
+          messages.push(message)
+        } else {
+          for (const message of commitMessages) {
+            if (message) {
+              messages.push(message)
+            }
           }
         }
       }
@@ -169,9 +182,18 @@ async function getMessages(
         break
       }
 
-      for (const i in github.context.payload.commits) {
-        if (github.context.payload.commits[i].message) {
-          messages.push(github.context.payload.commits[i].message)
+      if (pullRequestOptions.latestCommitMessage) {
+        const message =
+          github.context.payload.commits[
+            github.context.payload.commits.length - 1
+          ].message
+        messages.push(message)
+      } else {
+        for (const i in github.context.payload.commits) {
+          const message = github.context.payload.commits[i].message
+          if (message) {
+            messages.push(message)
+          }
         }
       }
 
@@ -182,6 +204,7 @@ async function getMessages(
     }
   }
 
+  core.debug(`Messages: ${messages}`)
   return messages
 }
 
