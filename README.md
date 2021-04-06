@@ -35,7 +35,7 @@ jobs:
   check-commit-message:
     name: Check Commit Message
     runs-on: ubuntu-latest
-    steps:ßß
+    steps:
       - name: Get commit message
         uses: dotCMS/commit-message-getter@v1
         with:
