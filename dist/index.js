@@ -287,14 +287,15 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = yield commitMessageGetter.getInputs();
-            let commitMessage = '';
+            let commitMessages = '';
             if (inputs.messages && inputs.messages.length === 0) {
                 core.info('No commits found in the payload, skipping check.');
             }
             else {
-                commitMessage = inputs.messages.join('\n');
+                commitMessages = inputs.messages.join('\n').replace(/\"/gi, '\\"');
+                core.info(`Commit messages found:\n ${commitMessages}`);
             }
-            core.setOutput('commit_message', commitMessage);
+            core.setOutput('commit_message', commitMessages);
         }
         catch (error) {
             core.setFailed(error);
