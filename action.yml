@@ -22,7 +22,7 @@ inputs:
     description: 'you must provide GITHUB_TOKEN to this input if checkAllCommitMessages is true'
     required: false
 runs:
-  using: node12
+  using: node16
   main: dist/index.js
 branding:
   icon: 'check'
